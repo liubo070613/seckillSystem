@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: QuickBuy
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+  # 异步任务配置
+  task:
+    execution:
+      pool:
+        core-size: 10
+        max-size: 20
+        queue-capacity: 100
+        keep-alive: 60s
+      thread-name-prefix: seckill-async-
+  # 数据库配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/quickbuy?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+# MyBatis配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: org.example.quickbuy.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 服务器配置
+server:
+  port: 8080
+
+# RocketMQ配置
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: seckill-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+  consumer:
+    pull-batch-size: 10 

@@ -6,6 +6,8 @@ import org.example.quickbuy.constant.SeckillStatus;
 import org.example.quickbuy.dto.SeckillActivityDTO;
 import org.example.quickbuy.entity.SeckillActivity;
 import org.example.quickbuy.mapper.SeckillActivityMapper;
+import org.example.quickbuy.mq.SeckillMessage;
+import org.example.quickbuy.mq.SeckillProducer;
 import org.example.quickbuy.service.RedisService;
 import org.example.quickbuy.service.SeckillService;
 import org.springframework.beans.BeanUtils;
@@ -32,6 +34,9 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
     private SeckillActivityMapper seckillActivityMapper;
+
+    @Autowired
+    private SeckillProducer seckillProducer;
 
     private DefaultRedisScript<Long> seckillScript;
 
@@ -112,12 +117,13 @@ public class SeckillServiceImpl implements SeckillService {
             // 5. 设置用户秒杀资格
             redisService.setUserSeckillQualify(userId, activityId);
 
-            // 6. 异步更新数据库库存
-            // TODO: 使用消息队列异步更新数据库库存
-            seckillActivityMapper.updateStock(activityId, result.intValue());
-
-            // 7. 异步创建订单
-            // TODO: 调用订单服务创建订单
+            // 6. 发送消息到RocketMQ
+            SeckillMessage message = new SeckillMessage();
+            message.setUserId(userId);
+            message.setActivityId(activityId);
+            message.setProductId(activity.getProductId());
+            message.setStock(result.intValue());
+            seckillProducer.sendSeckillMessage(message);
 
             return SeckillResult.SUCCESS;
         } catch (Exception e) {

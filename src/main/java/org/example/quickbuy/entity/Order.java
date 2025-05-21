@@ -9,12 +9,11 @@ public class Order {
     private Long id;
     private String orderNo;
     private Long userId;
-    private Long productId;
     private Long activityId;
-    private Integer quantity;
-    private BigDecimal price;
-    private BigDecimal totalAmount;
-    private Integer status;
+    private Long productId;
+    private BigDecimal amount;
+    private Integer status;  // 0-待支付 1-已支付 2-已取消
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    private LocalDateTime payTime;
 } 
