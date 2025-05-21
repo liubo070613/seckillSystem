@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.quickbuy.mapper.OrderMapper">
+    <insert id="insert" parameterType="org.example.quickbuy.entity.Order" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `order` (
+            order_no, user_id, product_id, activity_id, quantity, 
+            price, total_amount, status, create_time, update_time
+        ) VALUES (
+            #{orderNo}, #{userId}, #{productId}, #{activityId}, #{quantity},
+            #{price}, #{totalAmount}, #{status}, #{createTime}, #{updateTime}
+        )
+    </insert>
+    
+    <select id="selectByOrderNo" resultType="org.example.quickbuy.entity.Order">
+        SELECT * FROM `order` WHERE order_no = #{orderNo}
+    </select>
+</mapper> 
