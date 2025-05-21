@@ -7,6 +7,11 @@ public interface OrderService {
      */
     String createOrder(Long userId, Long activityId);
 
+    /**
+     * 等待支付结果
+     * @return 是否支付成功
+     */
+    boolean waitForPayment(String orderNo);
 
     /**
      * 支付订单

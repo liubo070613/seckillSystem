@@ -55,7 +55,12 @@ public class OrderServiceImpl implements OrderService {
         return order.getOrderNo();
     }
 
-
+    @Override
+    public boolean waitForPayment(String orderNo) {
+        // 查询订单状态
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        return order != null && order.getStatus() == OrderStatus.PAID.getCode();
+    }
 
     @Override
     @Transactional
