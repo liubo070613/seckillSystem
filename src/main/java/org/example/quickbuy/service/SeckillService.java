@@ -1,5 +1,6 @@
 package org.example.quickbuy.service;
 
+import org.example.quickbuy.constant.SeckillResult;
 import org.example.quickbuy.dto.SeckillActivityDTO;
 import org.example.quickbuy.entity.SeckillActivity;
 
@@ -15,7 +16,7 @@ public interface SeckillService {
      * 执行秒杀
      * @return 秒杀结果
      */
-    boolean seckill(Long userId, Long activityId) throws IOException;
+    SeckillResult seckill(Long userId, Long activityId) throws IOException;
 
     /**
      * 检查秒杀活动状态

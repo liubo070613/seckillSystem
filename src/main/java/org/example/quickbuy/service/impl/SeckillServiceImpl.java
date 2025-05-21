@@ -1,6 +1,7 @@
 package org.example.quickbuy.service.impl;
 
 import jakarta.annotation.PostConstruct;
+import org.example.quickbuy.constant.SeckillResult;
 import org.example.quickbuy.constant.SeckillStatus;
 import org.example.quickbuy.dto.SeckillActivityDTO;
 import org.example.quickbuy.entity.SeckillActivity;
@@ -73,47 +74,57 @@ public class SeckillServiceImpl implements SeckillService {
     }
 
     @Override
-    public boolean seckill(Long userId, Long activityId) {
-        // 1. 检查用户是否已经秒杀过
-        if (redisService.checkUserSeckillQualify(userId, activityId)) {
-            return false;
-        }
-
-        // 2. 检查秒杀活动状态
-        if (!checkSeckillStatus(activityId)) {
-            return false;
-        }
-
-        // 3. 获取秒杀活动信息
-        SeckillActivity activity = redisService.getSeckillActivity(activityId);
-        if (activity == null) {
-            // 如果Redis中没有，从数据库获取
-            activity = seckillActivityMapper.selectById(activityId);
-            if (activity == null) {
-                return false;
+    public SeckillResult seckill(Long userId, Long activityId) {
+        try {
+            // 1. 检查用户是否已经秒杀过
+            if (redisService.checkUserSeckillQualify(userId, activityId)) {
+                return SeckillResult.ALREADY_PURCHASED;
             }
-            // 重新缓存
-            redisService.cacheSeckillActivity(activity);
+
+            // 2. 获取秒杀活动信息
+            SeckillActivity activity = redisService.getSeckillActivity(activityId);
+            if (activity == null) {
+                // 如果Redis中没有，从数据库获取
+                activity = seckillActivityMapper.selectById(activityId);
+                if (activity == null) {
+                    return SeckillResult.ACTIVITY_NOT_EXIST;
+                }
+                // 重新缓存
+                redisService.cacheSeckillActivity(activity);
+            }
+
+            // 3. 检查秒杀活动状态
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(activity.getStartTime())) {
+                return SeckillResult.ACTIVITY_NOT_STARTED;
+            }
+            if (now.isAfter(activity.getEndTime())) {
+                return SeckillResult.ACTIVITY_ENDED;
+            }
+
+            // 4. 执行秒杀（使用Lua脚本保证原子性）
+            String stockKey = String.format("seckill:stock:%s", activityId);
+            Long result = redisTemplate.execute(seckillScript, Collections.singletonList(stockKey));
+            if (result == null || result < 0) {
+                return SeckillResult.STOCK_NOT_ENOUGH;
+            }
+
+            // 5. 设置用户秒杀资格
+            redisService.setUserSeckillQualify(userId, activityId);
+
+            // 6. 异步更新数据库库存
+            // TODO: 使用消息队列异步更新数据库库存
+            seckillActivityMapper.updateStock(activityId, result.intValue());
+
+            // 7. 异步创建订单
+            // TODO: 调用订单服务创建订单
+
+            return SeckillResult.SUCCESS;
+        } catch (Exception e) {
+            // 记录异常日志
+            e.printStackTrace();
+            return SeckillResult.SYSTEM_ERROR;
         }
-
-        // 4. 执行秒杀（使用Lua脚本保证原子性）
-        String stockKey = String.format("seckill:stock:%s", activityId);
-        Long result = redisTemplate.execute(seckillScript, Collections.singletonList(stockKey));
-        if (result == null || result < 0) {
-            return false;
-        }
-
-        // 5. 设置用户秒杀资格
-        redisService.setUserSeckillQualify(userId, activityId);
-
-        // 6. 异步更新数据库库存
-        // TODO: 使用消息队列异步更新数据库库存
-        seckillActivityMapper.updateStock(activityId, result.intValue());
-
-        // 7. 异步创建订单
-        // TODO: 调用订单服务创建订单
-
-        return true;
     }
 
     @Override

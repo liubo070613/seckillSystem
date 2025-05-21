@@ -1,5 +1,6 @@
 package org.example.quickbuy.controller;
 
+import org.example.quickbuy.constant.SeckillResult;
 import org.example.quickbuy.dto.SeckillActivityDTO;
 import org.example.quickbuy.service.SeckillService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +30,10 @@ public class SeckillController {
 
     @PostMapping("/{activityId}/seckill")
     public ResponseEntity<String> seckill(@PathVariable Long activityId, @RequestParam Long userId) throws IOException {
-        boolean success = seckillService.seckill(userId, activityId);
-        return success ? 
-            ResponseEntity.ok("秒杀成功") : 
-            ResponseEntity.badRequest().body("秒杀失败");
+        SeckillResult result = seckillService.seckill(userId, activityId);
+        return result == SeckillResult.SUCCESS ?
+            ResponseEntity.ok(result.getMessage()) :
+            ResponseEntity.badRequest().body(result.getMessage());
     }
 
     @GetMapping("/{activityId}/status")
