@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RocketMQMessageListener(
     topic = "seckill-topic",
-    consumerGroup = "seckill-consumer-group",
-    selectorExpression = "seckill-tag"
+    consumerGroup = "seckill-consumer-group"
 )
 public class SeckillConsumer implements RocketMQListener<SeckillMessage> {
 
@@ -21,6 +20,9 @@ public class SeckillConsumer implements RocketMQListener<SeckillMessage> {
     @Autowired
     private SeckillActivityMapper seckillActivityMapper;
 
+    @Autowired
+    private SeckillProducer seckillProducer;
+
     @Override
     public void onMessage(SeckillMessage message) {
         try {
@@ -28,16 +30,9 @@ public class SeckillConsumer implements RocketMQListener<SeckillMessage> {
             String orderNo = orderService.createOrder(message.getUserId(), message.getActivityId());
             message.setOrderNo(orderNo);
 
-            // 2. 等待支付结果
-            boolean paid = orderService.waitForPayment(orderNo);
-            if (paid) {
-                // 3. 支付成功后更新库存
-                //todo 怎么保证并发安全
-                seckillActivityMapper.updateStock(message.getActivityId(), message.getStock());
-            } else {
-                // 4. 支付失败，回滚库存
-                // TODO: 实现redis库存回滚逻辑
-            }
+            // 2. 发送15分钟延时消息，用于订单超时取消
+            // 延时级别15对应20分钟，这里使用14对应10分钟，实际项目中应该使用15
+            seckillProducer.sendOrderTimeoutMessage(message, 14);
         } catch (Exception e) {
             // 处理异常，可以考虑重试或记录日志
             e.printStackTrace();

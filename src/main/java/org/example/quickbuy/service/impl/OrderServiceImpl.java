@@ -5,6 +5,8 @@ import org.example.quickbuy.entity.Order;
 import org.example.quickbuy.entity.SeckillActivity;
 import org.example.quickbuy.mapper.OrderMapper;
 import org.example.quickbuy.mapper.SeckillActivityMapper;
+import org.example.quickbuy.mq.SeckillMessage;
+import org.example.quickbuy.mq.SeckillProducer;
 import org.example.quickbuy.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private SeckillActivityMapper seckillActivityMapper;
+
+    @Autowired
+    private SeckillProducer seckillProducer;
 
     @Override
     @Transactional
@@ -50,21 +55,7 @@ public class OrderServiceImpl implements OrderService {
         return order.getOrderNo();
     }
 
-    @Override
-    public boolean waitForPayment(String orderNo) {
-        // 模拟等待支付结果，实际项目中应该对接支付系统
-        try {
-            // 等待30秒
-            TimeUnit.SECONDS.sleep(30);
-            
-            // 查询订单状态
-            Order order = orderMapper.selectByOrderNo(orderNo);
-            return order != null && order.getStatus() == OrderStatus.PAID.getCode();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
-        }
-    }
+
 
     @Override
     @Transactional
@@ -87,6 +78,16 @@ public class OrderServiceImpl implements OrderService {
         
         orderMapper.updateStatus(orderNo, OrderStatus.PAID.getCode());
         orderMapper.updatePayTime(orderNo, order.getPayTime());
+
+        // 4. 发送支付成功消息
+        SeckillMessage message = new SeckillMessage();
+        message.setUserId(order.getUserId());
+        message.setActivityId(order.getActivityId());
+        message.setProductId(order.getProductId());
+        message.setOrderNo(orderNo);
+        // 库存数量为1，因为秒杀商品每个用户只能买一个
+        message.setStock(1);
+        seckillProducer.sendPaymentSuccessMessage(message);
     }
 
     @Override
