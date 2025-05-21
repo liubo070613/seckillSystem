@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.quickbuy.mapper.SeckillActivityMapper">
+    <insert id="insert" parameterType="org.example.quickbuy.entity.SeckillActivity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO seckill_activity (
+            product_id, seckill_price, stock, start_time, end_time, 
+            status, create_time, update_time
+        ) VALUES (
+            #{productId}, #{seckillPrice}, #{stock}, #{startTime}, #{endTime},
+            #{status}, #{createTime}, #{updateTime}
+        )
+    </insert>
+
+    <select id="selectById" resultType="org.example.quickbuy.entity.SeckillActivity">
+        SELECT * FROM seckill_activity WHERE id = #{id}
+    </select>
+
+    <update id="updateStatus">
+        UPDATE seckill_activity 
+        SET status = #{status}, 
+            update_time = CURRENT_TIMESTAMP 
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStock">
+        UPDATE seckill_activity 
+        SET stock = #{stock}, 
+            update_time = CURRENT_TIMESTAMP 
+        WHERE id = #{id}
+    </update>
+</mapper> 
