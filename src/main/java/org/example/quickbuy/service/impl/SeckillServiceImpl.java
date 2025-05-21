@@ -1,10 +1,13 @@
 package org.example.quickbuy.service.impl;
 
 import jakarta.annotation.PostConstruct;
+import org.example.quickbuy.constant.SeckillStatus;
+import org.example.quickbuy.dto.SeckillActivityDTO;
 import org.example.quickbuy.entity.SeckillActivity;
 import org.example.quickbuy.mapper.SeckillActivityMapper;
 import org.example.quickbuy.service.RedisService;
 import org.example.quickbuy.service.SeckillService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -49,9 +52,14 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Override
     @Transactional
-    public void initSeckillActivity(SeckillActivity activity) {
-        // 设置初始状态
-        activity.setStatus(0); // 未开始
+    public void initSeckillActivity(SeckillActivityDTO activityDTO) {
+        // 创建秒杀活动实体
+        SeckillActivity activity = new SeckillActivity();
+        // 使用BeanUtils复制属性
+        BeanUtils.copyProperties(activityDTO, activity);
+        
+        // 设置其他属性
+        activity.setStatus(SeckillStatus.NOT_STARTED); // 未开始
         activity.setCreateTime(LocalDateTime.now());
         activity.setUpdateTime(LocalDateTime.now());
         
@@ -123,19 +131,54 @@ public class SeckillServiceImpl implements SeckillService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        boolean isActive = now.isAfter(activity.getStartTime()) && now.isBefore(activity.getEndTime());
         
-        // 更新活动状态
-        if (isActive && activity.getStatus() != 1) {
-            activity.setStatus(1);
-            seckillActivityMapper.updateStatus(activityId, 1);
-            redisService.cacheSeckillActivity(activity);
-        } else if (!isActive && activity.getStatus() != 2) {
-            activity.setStatus(2);
-            seckillActivityMapper.updateStatus(activityId, 2);
-            redisService.cacheSeckillActivity(activity);
+        // 根据时间自动更新活动状态
+        if (now.isBefore(activity.getStartTime())) {
+            // 未开始
+            if (activity.getStatus() != SeckillStatus.NOT_STARTED) {
+                activity.setStatus(SeckillStatus.NOT_STARTED);
+                seckillActivityMapper.updateStatus(activityId, SeckillStatus.NOT_STARTED);
+                redisService.cacheSeckillActivity(activity);
+            }
+            return false;
+        } else if (now.isAfter(activity.getEndTime())) {
+            // 已结束
+            if (activity.getStatus() != SeckillStatus.ENDED) {
+                activity.setStatus(SeckillStatus.ENDED);
+                seckillActivityMapper.updateStatus(activityId, SeckillStatus.ENDED);
+                redisService.cacheSeckillActivity(activity);
+            }
+            return false;
+        } else {
+            // 进行中
+            if (activity.getStatus() != SeckillStatus.IN_PROGRESS) {
+                activity.setStatus(SeckillStatus.IN_PROGRESS);
+                seckillActivityMapper.updateStatus(activityId, SeckillStatus.IN_PROGRESS);
+                redisService.cacheSeckillActivity(activity);
+            }
+            return true;
+        }
+    }
+
+    @Override
+    @Transactional
+    public void endSeckillActivity(Long activityId) {
+        // 1. 获取活动信息
+        SeckillActivity activity = seckillActivityMapper.selectById(activityId);
+        if (activity == null) {
+            throw new RuntimeException("秒杀活动不存在");
         }
 
-        return isActive;
+        // 2. 更新活动状态为已结束
+        activity.setStatus(SeckillStatus.ENDED);
+        activity.setUpdateTime(LocalDateTime.now());
+        seckillActivityMapper.updateStatus(activityId, SeckillStatus.ENDED);
+
+        // 3. 更新Redis缓存
+        redisService.cacheSeckillActivity(activity);
+
+        // 4. 清理Redis中的库存信息
+        String stockKey = String.format("seckill:stock:%s", activityId);
+        redisTemplate.delete(stockKey);
     }
 }
