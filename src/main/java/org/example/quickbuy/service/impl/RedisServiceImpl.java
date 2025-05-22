@@ -79,11 +79,6 @@ public class RedisServiceImpl implements RedisService {
         return (Integer) redisTemplate.opsForValue().get(key);
     }
 
-    @Override
-    public boolean isUserSeckilled(Long userId, Long activityId) {
-        String key = String.format(RedisKeyConfig.USER_SECKILL_QUALIFY_KEY, userId, activityId);
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
-    }
 
     @Override
     public Long executeSeckillScript(Long activityId, DefaultRedisScript<Long> script) {

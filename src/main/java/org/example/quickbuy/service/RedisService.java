@@ -64,10 +64,6 @@ public interface RedisService {
      */
     Integer getSeckillStock(Long activityId);
 
-    /**
-     * 检查用户是否重复秒杀
-     */
-    boolean isUserSeckilled(Long userId, Long activityId);
 
     /**
      * 执行秒杀脚本

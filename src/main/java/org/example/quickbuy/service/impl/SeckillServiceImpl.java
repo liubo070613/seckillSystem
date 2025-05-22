@@ -75,7 +75,7 @@ public class SeckillServiceImpl implements SeckillService {
     public SeckillResult seckill(Long userId, Long activityId) {
         try {
             // 1. 检查用户是否重复秒杀
-            if (redisService.isUserSeckilled(userId, activityId)) {
+            if (redisService.checkUserSeckillQualify(userId, activityId)) {
                 return SeckillResult.REPEAT_SECKILL;
             }
 
