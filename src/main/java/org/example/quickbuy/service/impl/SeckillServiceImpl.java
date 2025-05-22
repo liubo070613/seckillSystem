@@ -105,7 +105,13 @@ public class SeckillServiceImpl implements SeckillService {
 
             // 4. 执行秒杀
             Long stock = redisService.executeSeckillScript(activityId, seckillScript);
-            if (stock == null || stock < 0) {
+            if (stock == null) {
+                return SeckillResult.SYSTEM_ERROR;
+            }
+            if (stock == -2) {
+                return SeckillResult.ACTIVITY_NOT_EXIST;
+            }
+            if (stock < 0) {
                 return SeckillResult.STOCK_NOT_ENOUGH;
             }
 

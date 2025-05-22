@@ -32,7 +32,10 @@ public class SeckillController {
     @PostMapping("/execute")
     public ResponseEntity<String> executeSeckill(@RequestParam Long userId, @RequestParam Long activityId) throws IOException {
         SeckillResult result = seckillService.seckill(userId, activityId);
-        return ResponseEntity.ok(result.getMessage());
+        if (result == SeckillResult.SUCCESS) {
+            return ResponseEntity.ok(result.getMessage());
+        }
+        return ResponseEntity.badRequest().body(result.getMessage());
     }
 
     @GetMapping("/{activityId}/status")
