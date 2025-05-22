@@ -87,6 +87,7 @@ public class SeckillServiceImpl implements SeckillService {
             }
 
             // 2. 获取秒杀活动信息
+            //todo: 缓存击穿问题,让一个线程去更新缓存，其他线程等待
             SeckillActivity activity = redisService.getSeckillActivity(activityId);
             if (activity == null) {
                 // 如果Redis中没有，从数据库获取

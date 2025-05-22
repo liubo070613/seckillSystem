@@ -19,6 +19,7 @@ public class PaymentSuccessConsumer implements RocketMQListener<SeckillMessage> 
     @Override
     public void onMessage(SeckillMessage message) {
         try {
+            //todo: 是否有安全性问题
             // 支付成功后更新数据库库存
             seckillActivityMapper.updateStock(message.getActivityId(), message.getStock());
         } catch (Exception e) {
