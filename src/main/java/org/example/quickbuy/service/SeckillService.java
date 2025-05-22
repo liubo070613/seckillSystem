@@ -1,6 +1,7 @@
 package org.example.quickbuy.service;
 
 import org.example.quickbuy.constant.SeckillResult;
+import org.example.quickbuy.constant.SeckillStatus;
 import org.example.quickbuy.dto.SeckillActivityDTO;
 import org.example.quickbuy.entity.SeckillActivity;
 
@@ -20,9 +21,8 @@ public interface SeckillService {
 
     /**
      * 检查秒杀活动状态
-     * @return true-可以秒杀，false-不可秒杀
      */
-    boolean checkSeckillStatus(Long activityId);
+    Integer checkSeckillStatus(Long activityId);
 
     /**
      * 结束秒杀活动

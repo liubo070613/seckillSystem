@@ -1,6 +1,7 @@
 package org.example.quickbuy.controller;
 
 import org.example.quickbuy.constant.SeckillResult;
+import org.example.quickbuy.constant.SeckillStatus;
 import org.example.quickbuy.dto.SeckillActivityDTO;
 import org.example.quickbuy.service.SeckillService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,17 +29,18 @@ public class SeckillController {
         return ResponseEntity.ok("秒杀活动已结束");
     }
 
-    @PostMapping("/{activityId}/seckill")
-    public ResponseEntity<String> seckill(@PathVariable Long activityId, @RequestParam Long userId) throws IOException {
+    @PostMapping("/execute")
+    public ResponseEntity<String> executeSeckill(@RequestParam Long userId, @RequestParam Long activityId) throws IOException {
         SeckillResult result = seckillService.seckill(userId, activityId);
-        return result == SeckillResult.SUCCESS ?
-            ResponseEntity.ok(result.getMessage()) :
-            ResponseEntity.badRequest().body(result.getMessage());
+        return ResponseEntity.ok(result.getMessage());
     }
 
     @GetMapping("/{activityId}/status")
     public ResponseEntity<String> checkStatus(@PathVariable Long activityId) {
-        boolean isActive = seckillService.checkSeckillStatus(activityId);
-        return ResponseEntity.ok(isActive ? "活动进行中" : "活动已结束");
+        Integer status = seckillService.checkSeckillStatus(activityId);
+        if (status == null) {
+            return ResponseEntity.ok("活动不存在");
+        }
+        return ResponseEntity.ok(SeckillStatus.getStatusDesc(status));
     }
 } 

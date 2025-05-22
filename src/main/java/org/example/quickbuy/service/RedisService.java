@@ -5,73 +5,77 @@ import org.example.quickbuy.entity.Product;
 import org.example.quickbuy.entity.SeckillActivity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
 
-@Service
-public class RedisService {
+/**
+ * Redis服务接口
+ */
+public interface RedisService {
+    /**
+     * 缓存商品信息
+     */
+    void cacheProduct(Product product);
 
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    /**
+     * 缓存商品库存
+     */
+    void cacheProductStock(Long productId, Integer stock);
 
-    // 缓存商品信息
-    public void cacheProduct(Product product) {
-        String key = String.format(RedisKeyConfig.PRODUCT_INFO_KEY, product.getId());
-        redisTemplate.opsForValue().set(key, product, 24, TimeUnit.HOURS);
-    }
+    /**
+     * 缓存秒杀活动信息
+     */
+    void cacheSeckillActivity(SeckillActivity activity);
 
-    // 缓存商品库存
-    public void cacheProductStock(Long productId, Integer stock) {
-        String key = String.format(RedisKeyConfig.PRODUCT_STOCK_KEY, productId);
-        redisTemplate.opsForValue().set(key, stock);
-    }
+    /**
+     * 缓存秒杀库存
+     */
+    void cacheSeckillStock(Long activityId, Integer stock);
 
-    // 缓存秒杀活动信息
-    public void cacheSeckillActivity(SeckillActivity activity) {
-        String key = String.format(RedisKeyConfig.SECKILL_ACTIVITY_KEY, activity.getId());
-        redisTemplate.opsForValue().set(key, activity);
-    }
+    /**
+     * 设置用户秒杀资格
+     */
+    void setUserSeckillQualify(Long userId, Long activityId);
 
-    // 缓存秒杀库存
-    public void cacheSeckillStock(Long activityId, Integer stock) {
-        String key = String.format(RedisKeyConfig.SECKILL_STOCK_KEY, activityId);
-        redisTemplate.opsForValue().set(key, stock);
-    }
+    /**
+     * 检查用户是否有秒杀资格
+     */
+    boolean checkUserSeckillQualify(Long userId, Long activityId);
 
-    // 设置用户秒杀资格
-    public void setUserSeckillQualify(Long userId, Long activityId) {
-        String key = String.format(RedisKeyConfig.USER_SECKILL_QUALIFY_KEY, userId, activityId);
-        redisTemplate.opsForValue().set(key, 1, 24, TimeUnit.HOURS);
-    }
+    /**
+     * 获取商品信息
+     */
+    Product getProduct(Long productId);
 
-    // 检查用户是否有秒杀资格
-    public boolean checkUserSeckillQualify(Long userId, Long activityId) {
-        String key = String.format(RedisKeyConfig.USER_SECKILL_QUALIFY_KEY, userId, activityId);
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
-    }
+    /**
+     * 获取秒杀活动信息
+     */
+    SeckillActivity getSeckillActivity(Long activityId);
 
-    // 获取商品信息
-    public Product getProduct(Long productId) {
-        String key = String.format(RedisKeyConfig.PRODUCT_INFO_KEY, productId);
-        return (Product) redisTemplate.opsForValue().get(key);
-    }
+    /**
+     * 获取商品库存
+     */
+    Integer getProductStock(Long productId);
 
-    // 获取秒杀活动信息
-    public SeckillActivity getSeckillActivity(Long activityId) {
-        String key = String.format(RedisKeyConfig.SECKILL_ACTIVITY_KEY, activityId);
-        return (SeckillActivity) redisTemplate.opsForValue().get(key);
-    }
+    /**
+     * 获取秒杀库存
+     */
+    Integer getSeckillStock(Long activityId);
 
-    // 获取商品库存
-    public Integer getProductStock(Long productId) {
-        String key = String.format(RedisKeyConfig.PRODUCT_STOCK_KEY, productId);
-        return (Integer) redisTemplate.opsForValue().get(key);
-    }
+    /**
+     * 检查用户是否重复秒杀
+     */
+    boolean isUserSeckilled(Long userId, Long activityId);
 
-    // 获取秒杀库存
-    public Integer getSeckillStock(Long activityId) {
-        String key = String.format(RedisKeyConfig.SECKILL_STOCK_KEY, activityId);
-        return (Integer) redisTemplate.opsForValue().get(key);
-    }
+    /**
+     * 执行秒杀脚本
+     */
+    Long executeSeckillScript(Long activityId, DefaultRedisScript<Long> script);
+
+    /**
+     * 清理秒杀活动相关数据
+     */
+    void clearSeckillActivity(Long activityId);
 } 
