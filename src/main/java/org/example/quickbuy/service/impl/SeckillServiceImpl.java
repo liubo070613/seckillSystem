@@ -41,8 +41,8 @@ public class SeckillServiceImpl implements SeckillService {
         seckillScript = new DefaultRedisScript<>();
         try {
             String script = StreamUtils.copyToString(
-                new ClassPathResource("scripts/seckill.lua").getInputStream(),
-                StandardCharsets.UTF_8
+                    new ClassPathResource("scripts/seckill.lua").getInputStream(),
+                    StandardCharsets.UTF_8
             );
             seckillScript.setScriptText(script);
             seckillScript.setResultType(Long.class);
@@ -57,15 +57,15 @@ public class SeckillServiceImpl implements SeckillService {
         // 创建秒杀活动实体
         SeckillActivity activity = new SeckillActivity();
         BeanUtils.copyProperties(activityDTO, activity);
-        
+
         // 设置初始状态
         activity.setStatus(SeckillStatus.NOT_STARTED);
         activity.setCreateTime(LocalDateTime.now());
         activity.setUpdateTime(LocalDateTime.now());
-        
+
         // 保存到数据库
         seckillActivityMapper.insert(activity);
-        
+
         // 缓存活动信息和库存
         redisService.cacheSeckillActivity(activity);
         redisService.cacheSeckillStock(activity.getId(), activity.getStock());
@@ -79,22 +79,40 @@ public class SeckillServiceImpl implements SeckillService {
                 return SeckillResult.REPEAT_SECKILL;
             }
 
-            // 2. 获取并检查活动状态
-            SeckillActivity activity = getAndCheckActivity(activityId);
+            // 2. 获取活动信息
+            SeckillActivity activity = getActivity(activityId);
             if (activity == null) {
                 return SeckillResult.ACTIVITY_NOT_EXIST;
             }
 
-            // 3. 执行秒杀
+            // 3. 检查活动状态
+            LocalDateTime now = LocalDateTime.now();
+            // 3.1 如果活动已手动结束，直接返回
+            if (activity.getStatus() == SeckillStatus.ENDED) {
+                return SeckillResult.ACTIVITY_ENDED;
+            }
+            // 3.2 检查时间状态
+            if (now.isBefore(activity.getStartTime())) {
+                updateActivityStatus(activity, SeckillStatus.NOT_STARTED);
+                return SeckillResult.ACTIVITY_NOT_STARTED;
+            }
+            if (now.isAfter(activity.getEndTime())) {
+                updateActivityStatus(activity, SeckillStatus.ENDED);
+                return SeckillResult.ACTIVITY_ENDED;
+            }
+            // 3.3 更新为进行中状态
+            updateActivityStatus(activity, SeckillStatus.IN_PROGRESS);
+
+            // 4. 执行秒杀
             Long stock = redisService.executeSeckillScript(activityId, seckillScript);
             if (stock == null || stock < 0) {
                 return SeckillResult.STOCK_NOT_ENOUGH;
             }
 
-            // 4. 记录用户秒杀资格
+            // 5. 记录用户秒杀资格
             redisService.setUserSeckillQualify(userId, activityId);
 
-            // 5. 发送秒杀消息
+            // 6. 发送秒杀消息
             sendSeckillMessage(userId, activity, stock);
 
             return SeckillResult.SUCCESS;
@@ -106,7 +124,7 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Override
     public Integer checkSeckillStatus(Long activityId) {
-        SeckillActivity activity = getAndCheckActivity(activityId);
+        SeckillActivity activity = getActivity(activityId);
         if (activity == null) {
             return null;
         }
@@ -132,7 +150,7 @@ public class SeckillServiceImpl implements SeckillService {
     /**
      * 获取并检查活动信息
      */
-    private SeckillActivity getAndCheckActivity(Long activityId) {
+    private SeckillActivity getActivity(Long activityId) {
         SeckillActivity activity = redisService.getSeckillActivity(activityId);
         if (activity == null) {
             activity = seckillActivityMapper.selectById(activityId);
@@ -141,23 +159,6 @@ public class SeckillServiceImpl implements SeckillService {
             }
         }
         return activity;
-    }
-
-    /**
-     * 检查活动时间状态
-     */
-    private SeckillResult checkActivityTimeStatus(SeckillActivity activity) {
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(activity.getStartTime())) {
-            updateActivityStatus(activity, SeckillStatus.NOT_STARTED);
-            return SeckillResult.ACTIVITY_NOT_STARTED;
-        }
-        if (now.isAfter(activity.getEndTime())) {
-            updateActivityStatus(activity, SeckillStatus.ENDED);
-            return SeckillResult.ACTIVITY_ENDED;
-        }
-        updateActivityStatus(activity, SeckillStatus.IN_PROGRESS);
-        return SeckillResult.SUCCESS;
     }
 
     /**
