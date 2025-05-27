@@ -5,10 +5,15 @@ import org.example.quickbuy.entity.Product;
 import org.example.quickbuy.entity.SeckillActivity;
 import org.example.quickbuy.service.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 
+import jakarta.annotation.PostConstruct;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +23,39 @@ public class RedisServiceImpl implements RedisService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    private DefaultRedisScript<Long> seckillScript;
+    private DefaultRedisScript<Long> rollbackStockScript;
+
+    @PostConstruct
+    public void init() {
+
+        // 初始化秒杀Lua脚本
+        seckillScript = new DefaultRedisScript<>();
+        try {
+            String script = StreamUtils.copyToString(
+                    new ClassPathResource("scripts/seckill.lua").getInputStream(),
+                    StandardCharsets.UTF_8
+            );
+            seckillScript.setScriptText(script);
+            seckillScript.setResultType(Long.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load seckill script", e);
+        }
+
+        // 初始化回滚库存脚本
+        rollbackStockScript = new DefaultRedisScript<>();
+        try {
+            String script = StreamUtils.copyToString(
+                    new ClassPathResource("scripts/rollback_stock.lua").getInputStream(),
+                    StandardCharsets.UTF_8
+            );
+            rollbackStockScript.setScriptText(script);
+            rollbackStockScript.setResultType(Long.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load rollback stock script", e);
+        }
+    }
 
     @Override
     public void cacheProduct(Product product) {
@@ -80,9 +118,9 @@ public class RedisServiceImpl implements RedisService {
     }
 
     @Override
-    public Long executeSeckillScript(Long activityId, RedisScript<Long> script, Long userId) {
+    public Long executeSeckillScript(Long activityId,  Long userId) {
         String stockKey = String.format(RedisKeyConfig.SECKILL_STOCK_KEY, activityId);
-        return redisTemplate.execute(script, Collections.singletonList(stockKey), userId);
+        return redisTemplate.execute(seckillScript, Collections.singletonList(stockKey), userId);
     }
 
     @Override
@@ -90,5 +128,12 @@ public class RedisServiceImpl implements RedisService {
         String activityKey = String.format(RedisKeyConfig.SECKILL_ACTIVITY_KEY, activityId);
         String stockKey = String.format(RedisKeyConfig.SECKILL_STOCK_KEY, activityId);
         redisTemplate.delete(Arrays.asList(activityKey, stockKey));
+    }
+
+    @Override
+    public Long rollbackSeckillStock(Long activityId, Integer stock, Long userId) {
+        return redisTemplate.execute(rollbackStockScript, 
+            Collections.singletonList(activityId.toString()), 
+            stock.toString(), userId.toString());
     }
 } 

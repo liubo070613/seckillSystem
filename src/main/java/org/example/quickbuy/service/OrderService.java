@@ -22,4 +22,11 @@ public interface OrderService {
      * 取消订单
      */
     void cancelOrder(String orderNo);
+
+    /**
+     * 获取订单状态
+     * @param orderNo 订单编号
+     * @return 订单状态，如果订单不存在返回null
+     */
+    Integer getOrderStatus(String orderNo);
 } 

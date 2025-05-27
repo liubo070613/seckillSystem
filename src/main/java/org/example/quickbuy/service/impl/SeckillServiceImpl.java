@@ -33,23 +33,6 @@ public class SeckillServiceImpl implements SeckillService {
     @Autowired
     private SeckillProducer seckillProducer;
 
-    private DefaultRedisScript<Long> seckillScript;
-
-    @PostConstruct
-    public void init() {
-        // 初始化Lua脚本
-        seckillScript = new DefaultRedisScript<>();
-        try {
-            String script = StreamUtils.copyToString(
-                    new ClassPathResource("scripts/seckill.lua").getInputStream(),
-                    StandardCharsets.UTF_8
-            );
-            seckillScript.setScriptText(script);
-            seckillScript.setResultType(Long.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load seckill script", e);
-        }
-    }
 
     @Override
     @Transactional
@@ -99,7 +82,7 @@ public class SeckillServiceImpl implements SeckillService {
             updateActivityStatus(activity, SeckillStatus.IN_PROGRESS);
 
             // 3. 执行秒杀
-            Long stock = redisService.executeSeckillScript(activityId, seckillScript, userId);
+            Long stock = redisService.executeSeckillScript(activityId, userId);
             if (stock == null) {
                 return SeckillResult.SYSTEM_ERROR;
             }
@@ -114,7 +97,7 @@ public class SeckillServiceImpl implements SeckillService {
             }
 
             // 4. 发送秒杀消息
-            sendSeckillMessage(userId, activity, stock);
+            sendSeckillMessage(userId, activity);
 
             return SeckillResult.SUCCESS;
         } catch (Exception e) {
@@ -177,12 +160,12 @@ public class SeckillServiceImpl implements SeckillService {
     /**
      * 发送秒杀消息
      */
-    private void sendSeckillMessage(Long userId, SeckillActivity activity, Long stock) {
+    private void sendSeckillMessage(Long userId, SeckillActivity activity) {
         SeckillMessage message = new SeckillMessage();
         message.setUserId(userId);
         message.setActivityId(activity.getId());
         message.setProductId(activity.getProductId());
-        message.setStock(stock.intValue());
+        message.setStock(1); // 假设每次秒杀1件商品
         seckillProducer.sendSeckillMessage(message);
     }
 }

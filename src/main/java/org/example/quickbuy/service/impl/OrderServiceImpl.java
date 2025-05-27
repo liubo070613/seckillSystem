@@ -12,10 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -113,6 +111,12 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.CANCELLED.getCode());
         order.setUpdateTime(LocalDateTime.now());
         orderMapper.updateStatus(orderNo, OrderStatus.CANCELLED.getCode());
+    }
+
+    @Override
+    public Integer getOrderStatus(String orderNo) {
+        Order order = orderMapper.selectByOrderNo(orderNo);
+        return order != null ? order.getStatus() : null;
     }
 
     /**

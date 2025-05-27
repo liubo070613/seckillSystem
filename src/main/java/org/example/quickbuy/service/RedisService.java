@@ -72,10 +72,19 @@ public interface RedisService {
      * @param userId 用户ID
      * @return 剩余库存，-1表示库存不足，-2表示活动不存在，-3表示重复秒杀
      */
-    Long executeSeckillScript(Long activityId, RedisScript<Long> script, Long userId);
+    Long executeSeckillScript(Long activityId,  Long userId);
 
     /**
      * 清理秒杀活动数据
      */
     void clearSeckillActivity(Long activityId);
+
+    /**
+     * 回滚秒杀库存
+     * @param activityId 活动ID
+     * @param stock 回滚数量
+     * @param userId 用户ID
+     * @return 回滚后的库存数量，-2表示活动不存在
+     */
+    Long rollbackSeckillStock(Long activityId, Integer stock, Long userId);
 } 
