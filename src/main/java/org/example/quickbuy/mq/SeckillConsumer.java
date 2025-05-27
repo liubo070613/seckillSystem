@@ -17,8 +17,6 @@ public class SeckillConsumer implements RocketMQListener<SeckillMessage> {
     @Autowired
     private OrderService orderService;
 
-    @Autowired
-    private SeckillActivityMapper seckillActivityMapper;
 
     @Autowired
     private SeckillProducer seckillProducer;
@@ -32,7 +30,7 @@ public class SeckillConsumer implements RocketMQListener<SeckillMessage> {
 
             // 2. 发送15分钟延时消息，用于订单超时取消
             // 延时级别15对应20分钟，这里使用14对应10分钟，实际项目中应该使用15
-//            seckillProducer.sendOrderTimeoutMessage(message, 14);
+            seckillProducer.sendOrderTimeoutMessage(message, 5);
         } catch (Exception e) {
             // 处理异常，可以考虑重试或记录日志
             e.printStackTrace();

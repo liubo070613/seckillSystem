@@ -6,7 +6,7 @@ import org.example.quickbuy.entity.SeckillActivity;
 import org.example.quickbuy.service.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -79,11 +79,10 @@ public class RedisServiceImpl implements RedisService {
         return (Integer) redisTemplate.opsForValue().get(key);
     }
 
-
     @Override
-    public Long executeSeckillScript(Long activityId, DefaultRedisScript<Long> script) {
+    public Long executeSeckillScript(Long activityId, RedisScript<Long> script, Long userId) {
         String stockKey = String.format(RedisKeyConfig.SECKILL_STOCK_KEY, activityId);
-        return redisTemplate.execute(script, Collections.singletonList(stockKey));
+        return redisTemplate.execute(script, Collections.singletonList(stockKey), userId);
     }
 
     @Override

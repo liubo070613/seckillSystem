@@ -6,6 +6,7 @@ import org.example.quickbuy.entity.SeckillActivity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -64,14 +65,17 @@ public interface RedisService {
      */
     Integer getSeckillStock(Long activityId);
 
-
     /**
      * 执行秒杀脚本
+     * @param activityId 活动ID
+     * @param script Lua脚本
+     * @param userId 用户ID
+     * @return 剩余库存，-1表示库存不足，-2表示活动不存在，-3表示重复秒杀
      */
-    Long executeSeckillScript(Long activityId, DefaultRedisScript<Long> script);
+    Long executeSeckillScript(Long activityId, RedisScript<Long> script, Long userId);
 
     /**
-     * 清理秒杀活动相关数据
+     * 清理秒杀活动数据
      */
     void clearSeckillActivity(Long activityId);
 } 

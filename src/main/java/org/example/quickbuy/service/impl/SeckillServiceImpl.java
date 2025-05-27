@@ -74,24 +74,19 @@ public class SeckillServiceImpl implements SeckillService {
     @Override
     public SeckillResult seckill(Long userId, Long activityId) {
         try {
-            // 1. 检查用户是否重复秒杀
-            if (redisService.checkUserSeckillQualify(userId, activityId)) {
-                return SeckillResult.REPEAT_SECKILL;
-            }
-
-            // 2. 获取活动信息
+            // 1. 获取活动信息
             SeckillActivity activity = getActivity(activityId);
             if (activity == null) {
                 return SeckillResult.ACTIVITY_NOT_EXIST;
             }
 
-            // 3. 检查活动状态
+            // 2. 检查活动状态
             LocalDateTime now = LocalDateTime.now();
-            // 3.1 如果活动已手动结束，直接返回
+            // 2.1 如果活动已手动结束，直接返回
             if (activity.getStatus() == SeckillStatus.ENDED) {
                 return SeckillResult.ACTIVITY_ENDED;
             }
-            // 3.2 检查时间状态
+            // 2.2 检查时间状态
             if (now.isBefore(activity.getStartTime())) {
                 updateActivityStatus(activity, SeckillStatus.NOT_STARTED);
                 return SeckillResult.ACTIVITY_NOT_STARTED;
@@ -100,25 +95,25 @@ public class SeckillServiceImpl implements SeckillService {
                 updateActivityStatus(activity, SeckillStatus.ENDED);
                 return SeckillResult.ACTIVITY_ENDED;
             }
-            // 3.3 更新为进行中状态
+            // 2.3 更新为进行中状态
             updateActivityStatus(activity, SeckillStatus.IN_PROGRESS);
 
-            // 4. 执行秒杀
-            Long stock = redisService.executeSeckillScript(activityId, seckillScript);
+            // 3. 执行秒杀
+            Long stock = redisService.executeSeckillScript(activityId, seckillScript, userId);
             if (stock == null) {
                 return SeckillResult.SYSTEM_ERROR;
             }
             if (stock == -2) {
                 return SeckillResult.ACTIVITY_NOT_EXIST;
             }
+            if (stock == -3) {
+                return SeckillResult.REPEAT_SECKILL;
+            }
             if (stock < 0) {
                 return SeckillResult.STOCK_NOT_ENOUGH;
             }
 
-            // 5. 记录用户秒杀资格
-            redisService.setUserSeckillQualify(userId, activityId);
-
-            // 6. 发送秒杀消息
+            // 4. 发送秒杀消息
             sendSeckillMessage(userId, activity, stock);
 
             return SeckillResult.SUCCESS;
