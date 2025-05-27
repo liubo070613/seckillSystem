@@ -1,5 +1,6 @@
--- 获取商品库存
-local stock = redis.call('get', KEYS[1])
+-- 获取库存
+local stockKey = string.format("seckill:stock:%s", KEYS[1])
+local stock = redis.call('get', stockKey)
 -- 如果key不存在，返回-2表示活动不存在
 if not stock then
     return -2
@@ -19,7 +20,7 @@ if stock <= 0 then
 end
 
 -- 扣减库存
-redis.call('decr', KEYS[1])
+redis.call('decr', stockKey)
 -- 记录用户秒杀资格
 redis.call('set', userKey, 1, 'EX', 86400)  -- 设置24小时过期
 -- 返回剩余库存

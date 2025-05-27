@@ -31,7 +31,8 @@ class QuickBuyApplicationTests {
 //        user.setUpdateTime(LocalDateTime.now());
 //        userMapper.insert(user);
 
-        redisService.rollbackSeckillStock(3L, 1, 1L);
+//        System.out.println(redisService.rollbackSeckillStock(3L, 1, 1L));
+
     }
 
 }

@@ -119,8 +119,7 @@ public class RedisServiceImpl implements RedisService {
 
     @Override
     public Long executeSeckillScript(Long activityId,  Long userId) {
-        String stockKey = String.format(RedisKeyConfig.SECKILL_STOCK_KEY, activityId);
-        return redisTemplate.execute(seckillScript, Collections.singletonList(stockKey), userId);
+        return redisTemplate.execute(seckillScript, Collections.singletonList(activityId.toString()), userId);
     }
 
     @Override
@@ -134,6 +133,6 @@ public class RedisServiceImpl implements RedisService {
     public Long rollbackSeckillStock(Long activityId, Integer stock, Long userId) {
         return redisTemplate.execute(rollbackStockScript, 
             Collections.singletonList(activityId.toString()), 
-            stock.toString(), userId.toString());
+            stock, userId);
     }
 } 
