@@ -2,8 +2,10 @@ package org.example.quickbuy.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.example.quickbuy.entity.Order;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Mapper
 public interface OrderMapper {
@@ -26,4 +28,14 @@ public interface OrderMapper {
      * 更新支付时间
      */
     int updatePayTime(@Param("orderNo") String orderNo, @Param("payTime") LocalDateTime payTime);
+
+    /**
+     * 查询超时未支付的订单
+     * @param timeoutThreshold 超时时间阈值
+     * @param status 订单状态
+     * @return 超时订单列表
+     */
+    @Select("SELECT * FROM `order` WHERE create_time < #{timeoutThreshold} AND status = #{status}")
+    List<Order> selectTimeoutOrders(@Param("timeoutThreshold") LocalDateTime timeoutThreshold, 
+                                  @Param("status") Integer status);
 } 

@@ -1,5 +1,7 @@
 package org.example.quickbuy.mq;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.rocketmq.spring.annotation.ConsumeMode;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.example.quickbuy.constant.OrderStatus;
@@ -10,10 +12,13 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Component
 @RocketMQMessageListener(
     topic = "order-timeout-topic",
-    consumerGroup = "order-timeout-consumer-group"
+    consumerGroup = "order-timeout-consumer-group",
+    consumeMode = ConsumeMode.CONCURRENTLY, // 并发消费，订单超时消息通常不需要严格顺序
+    maxReconsumeTimes = 3 // 最大重试次数
 )
 public class OrderTimeoutConsumer implements RocketMQListener<SeckillMessage> {
 
@@ -25,31 +30,58 @@ public class OrderTimeoutConsumer implements RocketMQListener<SeckillMessage> {
 
     @Override
     public void onMessage(SeckillMessage message) {
+        log.info("接收到订单超时消息: {}, 接收时间: {}", message, LocalDateTime.now());
+        
         try {
-            // 1. 检查订单状态
+            // 1. 参数校验
+            if (message == null || message.getOrderNo() == null) {
+                log.error("消息参数异常: {}", message);
+                return; // 参数异常直接返回，不重试
+            }
+
+            // 2. 检查订单状态
             Integer orderStatus = orderService.getOrderStatus(message.getOrderNo());
             if (orderStatus == null) {
-                System.out.println("订单不存在: " + message.getOrderNo());
+                log.warn("订单不存在: {}", message.getOrderNo());
+                return; // 订单不存在，直接返回
+            }
+            
+            // 3. 如果订单已支付，直接返回
+            if (orderStatus.equals(OrderStatus.PAID.getCode())) {
+                log.info("订单已支付，无需处理: {}", message.getOrderNo());
                 return;
             }
 
-            // 2. 如果订单已支付，直接返回
-            if (orderStatus == OrderStatus.PAID.getCode()) {
-                System.out.println("订单已支付，无需处理: " + message.getOrderNo());
+            // 4. 如果订单已取消，直接返回
+            if (orderStatus.equals(OrderStatus.CANCELLED.getCode())) {
+                log.info("订单已取消，无需处理: {}", message.getOrderNo());
                 return;
             }
 
-            // 3. 取消未支付订单
+            // 5. 取消未支付订单
             orderService.cancelOrder(message.getOrderNo());
+            log.info("订单取消成功: {}", message.getOrderNo());
 
-            // 4. 回滚Redis库存并恢复用户秒杀资格
-            Long stock = redisService.rollbackSeckillStock(message.getActivityId(), message.getStock(), message.getUserId());
+            // 6. 回滚Redis库存并恢复用户秒杀资格
+            Long stock = redisService.rollbackSeckillStock(
+                message.getActivityId(), 
+                message.getStock(), 
+                message.getUserId()
+            );
+            
             if (stock == -2) {
-                System.out.println("活动不存在，无法回滚库存: " + message.getActivityId());
+                log.warn("活动不存在，无法回滚库存: {}", message.getActivityId());
+            } else {
+                log.info("库存回滚成功，活动ID: {}, 回滚数量: {}, 当前库存: {}", 
+                    message.getActivityId(), message.getStock(), stock);
             }
+            
+            log.info("订单超时处理完成: {}", message.getOrderNo());
+            
         } catch (Exception e) {
-            // 处理异常，可以考虑重试或记录日志
-            e.printStackTrace();
+            log.error("处理订单超时消息失败，消息: {}, 错误: {}", message, e.getMessage(), e);
+            // 抛出异常，触发重试机制
+            throw new RuntimeException("订单超时处理失败: " + e.getMessage(), e);
         }
     }
 } 
