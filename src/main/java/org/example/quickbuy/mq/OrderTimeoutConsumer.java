@@ -8,6 +8,8 @@ import org.example.quickbuy.service.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 @RocketMQMessageListener(
     topic = "order-timeout-topic",
@@ -30,7 +32,7 @@ public class OrderTimeoutConsumer implements RocketMQListener<SeckillMessage> {
                 System.out.println("订单不存在: " + message.getOrderNo());
                 return;
             }
-            
+
             // 2. 如果订单已支付，直接返回
             if (orderStatus == OrderStatus.PAID.getCode()) {
                 System.out.println("订单已支付，无需处理: " + message.getOrderNo());

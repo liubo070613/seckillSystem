@@ -1,5 +1,6 @@
 package org.example.quickbuy.mq;
 
+import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
@@ -20,25 +21,61 @@ public class SeckillProducer {
      * 发送秒杀消息
      */
     public void sendSeckillMessage(SeckillMessage message) {
-        rocketMQTemplate.convertAndSend(SECKILL_TOPIC, message);
-    }
-
-    /**
-     * 发送订单超时消息
-     * @param message 秒杀消息
-     * @param delayLevel 延时级别（1-18，对应1s, 5s, 10s, 30s, 1m, 2m, 3m, 4m, 5m, 6m, 7m, 8m, 9m, 10m, 20m, 30m, 1h, 2h）
-     */
-    public void sendOrderTimeoutMessage(SeckillMessage message, int delayLevel) {
-        Message<SeckillMessage> msg = MessageBuilder.withPayload(message)
-                .setHeader("DELAY_TIME_LEVEL", delayLevel)
-                .build();
-        rocketMQTemplate.syncSend(ORDER_TIMEOUT_TOPIC, msg);
+        try {
+            SendResult sendResult = rocketMQTemplate.syncSend(SECKILL_TOPIC, message);
+            System.out.println("发送秒杀消息成功: " + sendResult);
+        } catch (Exception e) {
+            System.err.println("发送秒杀消息失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
      * 发送支付成功消息
      */
     public void sendPaymentSuccessMessage(SeckillMessage message) {
-        rocketMQTemplate.convertAndSend(PAYMENT_SUCCESS_TOPIC, message);
+        try {
+            SendResult sendResult = rocketMQTemplate.syncSend(PAYMENT_SUCCESS_TOPIC, message);
+            System.out.println("发送支付成功消息: " + sendResult);
+        } catch (Exception e) {
+            System.err.println("发送支付成功消息失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 发送订单超时消息（延时消息）
+     * @param message 消息内容
+     * @param delayLevel 延时级别（1-18）
+     *                   1=1s, 2=5s, 3=10s, 4=30s, 5=1m, 6=2m, 7=3m, 8=4m, 9=5m, 10=6m,
+     *                   11=7m, 12=8m, 13=9m, 14=10m, 15=20m, 16=30m, 17=1h, 18=2h
+     */
+    public void sendOrderTimeoutMessage(SeckillMessage message, int delayLevel) {
+        try {
+            Message<SeckillMessage> msg = MessageBuilder
+                    .withPayload(message)
+                    .build();
+            
+            SendResult sendResult = rocketMQTemplate.syncSend(ORDER_TIMEOUT_TOPIC, msg,3000, delayLevel);
+            System.out.println("发送订单超时消息成功，延时级别: " + delayLevel + ", 结果: " + sendResult);
+        } catch (Exception e) {
+            System.err.println("发送订单超时消息失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 发送订单超时消息（指定延时时间，单位：毫秒）
+     * @param message 消息内容
+     * @param delayTimeMillis 延时时间（毫秒）
+     */
+    public void sendOrderTimeoutMessageWithDelay(SeckillMessage message, long delayTimeMillis) {
+        try {
+            SendResult sendResult = rocketMQTemplate.syncSendDelayTimeMills(ORDER_TIMEOUT_TOPIC, message, delayTimeMillis);
+            System.out.println("发送订单超时消息成功，延时: " + delayTimeMillis + "ms, 结果: " + sendResult);
+        } catch (Exception e) {
+            System.err.println("发送订单超时消息失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 } 

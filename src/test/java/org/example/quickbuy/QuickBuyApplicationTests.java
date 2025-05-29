@@ -2,6 +2,8 @@ package org.example.quickbuy;
 
 import org.example.quickbuy.entity.User;
 import org.example.quickbuy.mapper.UserMapper;
+import org.example.quickbuy.mq.SeckillMessage;
+import org.example.quickbuy.mq.SeckillProducer;
 import org.example.quickbuy.service.RedisService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,9 @@ class QuickBuyApplicationTests {
     @Autowired
     private RedisService redisService;
 
+    @Autowired
+    private SeckillProducer seckillProducer;
+
     @Test
     void contextLoads() {
 
@@ -33,6 +38,10 @@ class QuickBuyApplicationTests {
 
 //        System.out.println(redisService.rollbackSeckillStock(3L, 1, 1L));
 
+//        System.out.println("发送时间: " + LocalDateTime.now());
+
+//        seckillProducer.sendOrderTimeoutMessage(new SeckillMessage(), 3);
+//        seckillProducer.sendOrderTimeoutMessageWithDelay(new SeckillMessage(), 5000);
     }
 
 }
