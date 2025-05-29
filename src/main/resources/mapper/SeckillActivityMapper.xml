@@ -32,4 +32,8 @@
     <select id="getStock" resultType="java.lang.Integer">
         SELECT stock FROM seckill_activity WHERE id = #{activityId}
     </select>
+
+    <select id="selectAllActivityIds" resultType="java.lang.Long">
+        SELECT id FROM seckill_activity
+    </select>
 </mapper> 

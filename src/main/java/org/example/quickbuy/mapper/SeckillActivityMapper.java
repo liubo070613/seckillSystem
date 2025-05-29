@@ -6,6 +6,8 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.example.quickbuy.entity.SeckillActivity;
 
+import java.util.List;
+
 @Mapper
 public interface SeckillActivityMapper {
     /**
@@ -35,4 +37,10 @@ public interface SeckillActivityMapper {
      * @return 当前库存数量
      */
     Integer getStock(@Param("activityId") Long activityId);
+
+    /**
+     * 查询所有活动ID
+     * @return 所有活动ID列表
+     */
+    List<Long> selectAllActivityIds();
 } 

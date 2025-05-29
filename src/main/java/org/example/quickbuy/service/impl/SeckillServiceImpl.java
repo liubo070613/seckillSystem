@@ -11,6 +11,7 @@ import org.example.quickbuy.mq.SeckillMessage;
 import org.example.quickbuy.mq.SeckillProducer;
 import org.example.quickbuy.service.RedisService;
 import org.example.quickbuy.service.SeckillService;
+import org.example.quickbuy.util.BloomFilter;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -21,8 +22,10 @@ import org.springframework.util.StreamUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -36,7 +39,34 @@ public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
     private SeckillProducer seckillProducer;
+    
+    @Autowired
+    private BloomFilter bloomFilter;
+    
+    private static final String ACTIVITY_BLOOM_FILTER_KEY = "activity";
 
+    @PostConstruct
+    public void init() {
+        // 初始化布隆过滤器
+        initBloomFilter();
+    }
+    
+    /**
+     * 初始化布隆过滤器
+     */
+    private void initBloomFilter() {
+        try {
+            // 查询所有活动ID
+            List<Long> activityIds = seckillActivityMapper.selectAllActivityIds();
+            // 将活动ID添加到布隆过滤器
+            List<String> activityIdStrings = activityIds.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.toList());
+            bloomFilter.addAll(ACTIVITY_BLOOM_FILTER_KEY, activityIdStrings);
+        } catch (Exception e) {
+            log.error("初始化布隆过滤器异常", e);
+        }
+    }
 
     @Override
     @Transactional
@@ -56,6 +86,9 @@ public class SeckillServiceImpl implements SeckillService {
         // 缓存活动信息和库存
         redisService.cacheSeckillActivity(activity);
         redisService.cacheSeckillStock(activity.getId(), activity.getStock());
+        
+        // 添加到布隆过滤器
+        bloomFilter.add(ACTIVITY_BLOOM_FILTER_KEY, String.valueOf(activity.getId()));
     }
 
     @Override
@@ -139,13 +172,18 @@ public class SeckillServiceImpl implements SeckillService {
      * 获取并检查活动信息
      */
     private SeckillActivity getActivity(Long activityId) {
-        // 1. 先查Redis缓存
+        // 1. 先检查布隆过滤器
+        if (!bloomFilter.mightContain(ACTIVITY_BLOOM_FILTER_KEY, String.valueOf(activityId))) {
+            return null;
+        }
+        
+        // 2. 查Redis缓存
         SeckillActivity activity = redisService.getSeckillActivity(activityId);
         if (activity != null) {
             return activity;
         }
 
-        // 2. 缓存未命中，尝试获取分布式锁
+        // 3. 缓存未命中，尝试获取分布式锁
         String lockKey = redisService.getActivityLockKey(activityId);
         String requestId = UUID.randomUUID().toString();
         
@@ -158,16 +196,16 @@ public class SeckillServiceImpl implements SeckillService {
                 return getActivity(activityId);
             }
 
-            // 3. 获取锁成功，再次检查缓存（双重检查）
+            // 4. 获取锁成功，再次检查缓存（双重检查）
             activity = redisService.getSeckillActivity(activityId);
             if (activity != null) {
                 return activity;
             }
 
-            // 4. 查询数据库
+            // 5. 查询数据库
             activity = seckillActivityMapper.selectById(activityId);
             if (activity != null) {
-                // 5. 重建缓存
+                // 6. 重建缓存
                 redisService.cacheSeckillActivity(activity);
                 redisService.cacheSeckillStock(activity.getId(), activity.getStock());
             }
@@ -179,7 +217,7 @@ public class SeckillServiceImpl implements SeckillService {
             // 发生异常时，直接查询数据库
             return seckillActivityMapper.selectById(activityId);
         } finally {
-            // 6. 释放锁
+            // 8. 释放锁
             try {
                 redisService.releaseLock(lockKey, requestId);
             } catch (Exception e) {

@@ -1,5 +1,6 @@
 package org.example.quickbuy.mq;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.spring.core.RocketMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,9 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 
+import java.util.UUID;
+
+@Slf4j
 @Component
 public class SeckillProducer {
     
@@ -21,13 +25,14 @@ public class SeckillProducer {
      * 发送秒杀消息
      */
     public void sendSeckillMessage(SeckillMessage message) {
-        try {
-            SendResult sendResult = rocketMQTemplate.syncSend(SECKILL_TOPIC, message);
-            System.out.println("发送秒杀消息成功: " + sendResult);
-        } catch (Exception e) {
-            System.err.println("发送秒杀消息失败: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // 生成消息ID
+        message.setMessageId(UUID.randomUUID().toString());
+        
+        Message<SeckillMessage> msg = MessageBuilder.withPayload(message).build();
+        rocketMQTemplate.syncSend(SECKILL_TOPIC, msg);
+        
+        log.info("发送秒杀消息成功: messageId={}, userId={}, activityId={}", 
+            message.getMessageId(), message.getUserId(), message.getActivityId());
     }
 
     /**
