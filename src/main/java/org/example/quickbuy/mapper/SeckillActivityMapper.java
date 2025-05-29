@@ -25,8 +25,9 @@ public interface SeckillActivityMapper {
 
     /**
      * 更新秒杀活动库存
+     * 库存减1
      */
-    int updateStock(@Param("activityId") Long activityId, @Param("stock") Integer stock);
+    int updateStock(@Param("activityId") Long activityId);
 
     /**
      * 查询活动的当前库存

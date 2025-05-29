@@ -36,12 +36,6 @@ public class SeckillConsumer implements RocketMQListener<SeckillMessage> {
                 log.error("接收到空消息");
                 return;
             }
-            
-            if (message.getUserId() == null || message.getActivityId() == null) {
-                log.error("消息参数不完整: userId={}, activityId={}", 
-                    message.getUserId(), message.getActivityId());
-                return;
-            }
 
             // 2. 创建订单
             String orderNo = orderService.createOrder(message.getUserId(), message.getActivityId());
@@ -55,7 +49,7 @@ public class SeckillConsumer implements RocketMQListener<SeckillMessage> {
 
             // 3. 发送订单超时消息（30分钟延时）
             try {
-                seckillProducer.sendOrderTimeoutMessage(message, 16); // 16对应30分钟
+                seckillProducer.sendOrderTimeoutMessage(message, 5); // 16对应30分钟
                 log.info("订单超时消息发送成功，订单号: {}", orderNo);
             } catch (Exception e) {
                 log.error("发送订单超时消息失败，订单号: {}", orderNo, e);

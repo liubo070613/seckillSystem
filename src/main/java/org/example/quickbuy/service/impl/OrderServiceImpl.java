@@ -71,16 +71,17 @@ public class OrderServiceImpl implements OrderService {
 
         // 2. 检查订单状态
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT.getCode()) {
-            throw new RuntimeException("订单状态不正确");
+            if (order.getStatus() == OrderStatus.PAID.getCode())
+                throw new RuntimeException("订单已支付");
+            else if (order.getStatus() == OrderStatus.CANCELLED.getCode())
+                throw new RuntimeException("订单已取消");
         }
 
         // 3. 更新订单状态
         order.setStatus(OrderStatus.PAID.getCode());
         order.setPayTime(LocalDateTime.now());
         order.setUpdateTime(LocalDateTime.now());
-        
-        orderMapper.updateStatus(orderNo, OrderStatus.PAID.getCode());
-        orderMapper.updatePayTime(orderNo, order.getPayTime());
+        orderMapper.updateOrder(order);
 
         // 4. 发送支付成功消息
         SeckillMessage message = new SeckillMessage();

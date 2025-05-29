@@ -26,7 +26,6 @@ public class PaymentSuccessConsumer implements RocketMQListener<SeckillMessage> 
     @Override
     public void onMessage(SeckillMessage message) {
 
-        //todo 更新库存实时的并发问题
         log.info("接收到支付成功消息: {}, 接收时间: {}", message, LocalDateTime.now());
         
         try {
@@ -48,7 +47,7 @@ public class PaymentSuccessConsumer implements RocketMQListener<SeckillMessage> 
             }
 
             // 2. 更新数据库库存
-            int updatedRows = seckillActivityMapper.updateStock(message.getActivityId(), message.getStock());
+            int updatedRows = seckillActivityMapper.updateStock(message.getActivityId());
             
             if (updatedRows == 0) {
                 log.warn("库存更新失败，可能活动不存在: activityId={}", message.getActivityId());

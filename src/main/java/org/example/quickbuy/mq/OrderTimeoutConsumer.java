@@ -72,7 +72,7 @@ public class OrderTimeoutConsumer implements RocketMQListener<SeckillMessage> {
             if (stock == -2) {
                 log.warn("活动不存在，无法回滚库存: {}", message.getActivityId());
             } else {
-                log.info("库存回滚成功，活动ID: {}, 回滚数量: {}, 当前库存: {}", 
+                log.info("redis库存回滚成功，活动ID: {}, 回滚数量: {}, 当前库存: {}",
                     message.getActivityId(), message.getStock(), stock);
             }
             

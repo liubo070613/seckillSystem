@@ -23,10 +23,10 @@
     </update>
 
     <update id="updateStock">
-        UPDATE seckill_activity 
-        SET stock = #{stock}, 
-            update_time = CURRENT_TIMESTAMP 
-        WHERE id = #{id}
+        UPDATE seckill_activity
+        SET stock = stock - 1,
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{activityId}
     </update>
 
     <select id="getStock" resultType="java.lang.Integer">

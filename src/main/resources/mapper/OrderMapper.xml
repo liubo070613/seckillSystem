@@ -36,4 +36,18 @@
               #{timeoutThreshold}
           AND status = #{status}
     </select>
+
+    <update id="updateOrder">
+        UPDATE `order`
+        <set>
+            <if test="order.userId != null">user_id = #{order.userId},</if>
+            <if test="order.activityId != null">activity_id = #{order.activityId},</if>
+            <if test="order.productId != null">product_id = #{order.productId},</if>
+            <if test="order.amount != null">amount = #{order.amount},</if>
+            <if test="order.status != null">status = #{order.status},</if>
+            <if test="order.createTime != null">create_time = #{order.createTime},</if>
+            update_time = CURRENT_TIMESTAMP
+        </set>
+        WHERE order_no = #{order.orderNo}
+    </update>
 </mapper> 

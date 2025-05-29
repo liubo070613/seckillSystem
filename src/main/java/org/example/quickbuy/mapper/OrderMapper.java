@@ -29,6 +29,9 @@ public interface OrderMapper {
      */
     int updatePayTime(@Param("orderNo") String orderNo, @Param("payTime") LocalDateTime payTime);
 
+    //根据订单更新订单
+    int updateOrder(@Param("order") Order order);
+
     /**
      * 查询超时未支付的订单
      * @param timeoutThreshold 超时时间阈值
