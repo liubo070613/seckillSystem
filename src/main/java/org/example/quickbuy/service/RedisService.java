@@ -87,4 +87,29 @@ public interface RedisService {
      * @return 回滚后的库存数量，-2表示活动不存在
      */
     Long rollbackSeckillStock(Long activityId, Integer stock, Long userId);
+
+    /**
+     * 尝试获取分布式锁
+     * @param lockKey 锁的key
+     * @param requestId 请求标识
+     * @param expireTime 过期时间
+     * @param timeUnit 时间单位
+     * @return 是否获取成功
+     */
+    boolean tryLock(String lockKey, String requestId, long expireTime, TimeUnit timeUnit);
+
+    /**
+     * 释放分布式锁
+     * @param lockKey 锁的key
+     * @param requestId 请求标识
+     * @return 是否释放成功
+     */
+    boolean releaseLock(String lockKey, String requestId);
+
+    /**
+     * 获取分布式锁的key
+     * @param activityId 活动ID
+     * @return 锁的key
+     */
+    String getActivityLockKey(Long activityId);
 } 

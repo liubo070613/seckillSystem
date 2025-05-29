@@ -18,4 +18,7 @@ public class RedisKeyConfig {
     
     // 秒杀商品库存key
     public static final String SECKILL_STOCK_KEY = "seckill:stock:%s";
+
+    /** 活动分布式锁前缀 */
+    public static final String ACTIVITY_LOCK_PREFIX = "seckill:lock:activity:";
 } 

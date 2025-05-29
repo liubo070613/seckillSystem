@@ -1,6 +1,7 @@
 package org.example.quickbuy.service.impl;
 
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.example.quickbuy.constant.SeckillResult;
 import org.example.quickbuy.constant.SeckillStatus;
 import org.example.quickbuy.dto.SeckillActivityDTO;
@@ -20,8 +21,11 @@ import org.springframework.util.StreamUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
+@Slf4j
 public class SeckillServiceImpl implements SeckillService {
 
     @Autowired
@@ -135,14 +139,53 @@ public class SeckillServiceImpl implements SeckillService {
      * 获取并检查活动信息
      */
     private SeckillActivity getActivity(Long activityId) {
+        // 1. 先查Redis缓存
         SeckillActivity activity = redisService.getSeckillActivity(activityId);
-        if (activity == null) {
+        if (activity != null) {
+            return activity;
+        }
+
+        // 2. 缓存未命中，尝试获取分布式锁
+        String lockKey = redisService.getActivityLockKey(activityId);
+        String requestId = UUID.randomUUID().toString();
+        
+        try {
+            // 尝试获取锁，等待100ms，锁过期时间10s
+            boolean locked = redisService.tryLock(lockKey, requestId, 10, TimeUnit.SECONDS);
+            if (!locked) {
+                // 获取锁失败，说明其他线程正在重建缓存，等待100ms后重试
+                Thread.sleep(100);
+                return getActivity(activityId);
+            }
+
+            // 3. 获取锁成功，再次检查缓存（双重检查）
+            activity = redisService.getSeckillActivity(activityId);
+            if (activity != null) {
+                return activity;
+            }
+
+            // 4. 查询数据库
             activity = seckillActivityMapper.selectById(activityId);
             if (activity != null) {
+                // 5. 重建缓存
                 redisService.cacheSeckillActivity(activity);
+                redisService.cacheSeckillStock(activity.getId(), activity.getStock());
+            }
+            
+            return activity;
+            
+        } catch (Exception e) {
+            log.error("获取活动信息异常: activityId={}", activityId, e);
+            // 发生异常时，直接查询数据库
+            return seckillActivityMapper.selectById(activityId);
+        } finally {
+            // 6. 释放锁
+            try {
+                redisService.releaseLock(lockKey, requestId);
+            } catch (Exception e) {
+                log.error("释放分布式锁异常: lockKey={}, requestId={}", lockKey, requestId, e);
             }
         }
-        return activity;
     }
 
     /**

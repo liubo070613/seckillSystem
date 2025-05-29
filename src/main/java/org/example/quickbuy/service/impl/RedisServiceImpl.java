@@ -1,14 +1,15 @@
 package org.example.quickbuy.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.quickbuy.config.RedisKeyConfig;
 import org.example.quickbuy.entity.Product;
 import org.example.quickbuy.entity.SeckillActivity;
+import org.example.quickbuy.service.DistributedLockManager;
 import org.example.quickbuy.service.RedisService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 
@@ -18,11 +19,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 public class RedisServiceImpl implements RedisService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private DistributedLockManager lockManager;
 
     private DefaultRedisScript<Long> seckillScript;
     private DefaultRedisScript<Long> rollbackStockScript;
@@ -134,5 +139,20 @@ public class RedisServiceImpl implements RedisService {
         return redisTemplate.execute(rollbackStockScript, 
             Collections.singletonList(activityId.toString()), 
             stock, userId);
+    }
+
+    @Override
+    public boolean tryLock(String lockKey, String requestId, long expireTime, TimeUnit timeUnit) {
+        return lockManager.tryLock(lockKey, requestId, expireTime, timeUnit);
+    }
+
+    @Override
+    public boolean releaseLock(String lockKey, String requestId) {
+        return lockManager.releaseLock(lockKey, requestId);
+    }
+
+    @Override
+    public String getActivityLockKey(Long activityId) {
+        return RedisKeyConfig.ACTIVITY_LOCK_PREFIX + activityId;
     }
 } 
