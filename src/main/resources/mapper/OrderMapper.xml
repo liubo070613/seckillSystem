@@ -28,4 +28,12 @@
             update_time = CURRENT_TIMESTAMP
         WHERE order_no = #{orderNo}
     </update>
+
+    <select id="selectTimeoutOrders" resultType="org.example.quickbuy.entity.Order">
+        SELECT *
+        FROM `order`
+        WHERE create_time &lt;
+              #{timeoutThreshold}
+          AND status = #{status}
+    </select>
 </mapper> 

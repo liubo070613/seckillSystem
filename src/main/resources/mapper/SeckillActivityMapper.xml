@@ -28,4 +28,8 @@
             update_time = CURRENT_TIMESTAMP 
         WHERE id = #{id}
     </update>
+
+    <select id="getStock" resultType="java.lang.Integer">
+        SELECT stock FROM seckill_activity WHERE id = #{activityId}
+    </select>
 </mapper> 

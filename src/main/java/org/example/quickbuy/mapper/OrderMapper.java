@@ -35,7 +35,6 @@ public interface OrderMapper {
      * @param status 订单状态
      * @return 超时订单列表
      */
-    @Select("SELECT * FROM `order` WHERE create_time < #{timeoutThreshold} AND status = #{status}")
-    List<Order> selectTimeoutOrders(@Param("timeoutThreshold") LocalDateTime timeoutThreshold, 
+    List<Order> selectTimeoutOrders(@Param("timeoutThreshold") LocalDateTime timeoutThreshold,
                                   @Param("status") Integer status);
 } 
