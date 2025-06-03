@@ -1,5 +1,6 @@
 package org.example.quickbuy.controller;
 
+import org.example.quickbuy.mapper.SeckillActivityMapper;
 import org.example.quickbuy.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +11,9 @@ public class PaymentController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private SeckillActivityMapper seckillActivityMapper;
 
     /**
      * 支付订单
@@ -38,6 +42,15 @@ public class PaymentController {
             return paid ? "已支付" : "未支付";
         } catch (Exception e) {
             return "查询失败：" + e.getMessage();
+        }
+    }
+
+    @PostMapping("/updateStock/{activityId}")
+    public void updateStock(@PathVariable Long activityId) {
+        try {
+            seckillActivityMapper.updateStock(activityId);
+        } catch (Exception e) {
+            throw new RuntimeException("更新库存失败: " + e.getMessage(), e);
         }
     }
 } 
